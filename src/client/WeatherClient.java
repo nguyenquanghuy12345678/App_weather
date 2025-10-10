@@ -88,6 +88,9 @@ public class WeatherClient extends JFrame {
         btnRefresh.addActionListener(e -> requestWeather());
         btnDisconnect.addActionListener(e -> disconnect());
         
+        // Search listener
+        weatherPanel.setSearchListener(e -> searchLocation());
+        
         // Auto refresh every 30 seconds
         autoRefreshTimer = new Timer(30000, e -> {
             if (connected) {
@@ -136,6 +139,7 @@ public class WeatherClient extends JFrame {
                 lblStatus.setForeground(Constants.COLOR_SUCCESS);
                 btnRefresh.setEnabled(true);
                 btnDisconnect.setEnabled(true);
+                weatherPanel.setSearchEnabled(true);
                 
                 // Start listening for messages
                 startListening();
@@ -207,6 +211,63 @@ public class WeatherClient extends JFrame {
         }
     }
     
+    private void searchLocation() {
+        if (!connected) return;
+        
+        try {
+            String selectedLocation = weatherPanel.getSelectedLocation();
+            
+            if (selectedLocation == null || selectedLocation.trim().isEmpty()) {
+                weatherPanel.showError("Vui lòng nhập tên địa điểm");
+                return;
+            }
+            
+            // First try to get from predefined locations
+            LocationData locationData = getLocationCoordinates(selectedLocation);
+            
+            // If not found, send the location name to server for geocoding
+            if (locationData == null) {
+                locationData = new LocationData(selectedLocation, 0, 0); // Server will geocode
+            }
+            
+            Message request = new Message(Constants.MSG_LOCATION_SEARCH, username, locationData);
+            out.writeObject(request);
+            out.flush();
+            
+        } catch (IOException e) {
+            weatherPanel.showError("Failed to search location");
+            e.printStackTrace();
+        }
+    }
+    
+    private LocationData getLocationCoordinates(String locationName) {
+        // Mapping of location names to their coordinates
+        switch (locationName) {
+            case "Da Nang, Vietnam":
+                return new LocationData("Da Nang, Vietnam", 16.0544, 108.2022);
+            case "Ho Chi Minh City, Vietnam":
+                return new LocationData("Ho Chi Minh City, Vietnam", 10.8231, 106.6297);
+            case "Hanoi, Vietnam":
+                return new LocationData("Hanoi, Vietnam", 21.0285, 105.8542);
+            case "Tokyo, Japan":
+                return new LocationData("Tokyo, Japan", 35.6762, 139.6503);
+            case "Seoul, South Korea":
+                return new LocationData("Seoul, South Korea", 37.5665, 126.9780);
+            case "Bangkok, Thailand":
+                return new LocationData("Bangkok, Thailand", 13.7563, 100.5018);
+            case "Singapore":
+                return new LocationData("Singapore", 1.3521, 103.8198);
+            case "New York, USA":
+                return new LocationData("New York, USA", 40.7128, -74.0060);
+            case "London, UK":
+                return new LocationData("London, UK", 51.5074, -0.1278);
+            case "Paris, France":
+                return new LocationData("Paris, France", 48.8566, 2.3522);
+            default:
+                return null;
+        }
+    }
+    
     private void disconnect() {
         try {
             connected = false;
@@ -226,6 +287,7 @@ public class WeatherClient extends JFrame {
             lblStatus.setForeground(Constants.COLOR_DANGER);
             btnRefresh.setEnabled(false);
             btnDisconnect.setEnabled(false);
+            weatherPanel.setSearchEnabled(false);
             
             weatherPanel.showError("Disconnected from server");
             

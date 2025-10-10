@@ -4,10 +4,13 @@ import server.WeatherData;
 import shared.*;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionListener;
 
 public class WeatherPanel extends JPanel {
     private JLabel lblLocation, lblTemperature, lblCondition, lblHumidity, lblWind, lblUpdate;
     private JLabel lblWeatherIcon;
+    private JComboBox<String> cboLocation;
+    private JButton btnSearch;
     
     public WeatherPanel() {
         initUI();
@@ -18,13 +21,64 @@ public class WeatherPanel extends JPanel {
         setBackground(new Color(135, 206, 250)); // Sky blue
         setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         
-        // Header
-        JPanel headerPanel = new JPanel();
+        // Header with search
+        JPanel headerPanel = new JPanel(new BorderLayout(10, 10));
         headerPanel.setOpaque(false);
+        
         lblLocation = new JLabel("Weather Information");
         lblLocation.setFont(new Font("Segoe UI", Font.BOLD, 32));
         lblLocation.setForeground(Color.WHITE);
-        headerPanel.add(lblLocation);
+        lblLocation.setHorizontalAlignment(SwingConstants.CENTER);
+        
+        // Search panel
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+        searchPanel.setOpaque(false);
+        
+        JLabel lblSearchIcon = new JLabel("🔍");
+        lblSearchIcon.setFont(new Font("Segoe UI", Font.PLAIN, 20));
+        
+        // Predefined locations
+        String[] locations = {
+            "Da Nang, Vietnam",
+            "Ho Chi Minh City, Vietnam",
+            "Hanoi, Vietnam",
+            "Tokyo, Japan",
+            "Seoul, South Korea",
+            "Bangkok, Thailand",
+            "Singapore",
+            "New York, USA",
+            "London, UK",
+            "Paris, France"
+        };
+        
+        cboLocation = new JComboBox<>(locations);
+        cboLocation.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        cboLocation.setPreferredSize(new Dimension(250, 35));
+        cboLocation.setBackground(Color.WHITE);
+        cboLocation.setEnabled(false);
+        cboLocation.setEditable(true); // Allow user to type custom location
+        
+        // Add placeholder-like behavior
+        JTextField editor = (JTextField) cboLocation.getEditor().getEditorComponent();
+        editor.setForeground(Color.GRAY);
+        editor.setText("Nhập tên thành phố...");
+        
+        btnSearch = new JButton("Tìm kiếm");
+        btnSearch.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnSearch.setBackground(Constants.COLOR_PRIMARY);
+        btnSearch.setForeground(Color.WHITE);
+        btnSearch.setFocusPainted(false);
+        btnSearch.setBorderPainted(false);
+        btnSearch.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnSearch.setPreferredSize(new Dimension(100, 35));
+        btnSearch.setEnabled(false);
+        
+        searchPanel.add(lblSearchIcon);
+        searchPanel.add(cboLocation);
+        searchPanel.add(btnSearch);
+        
+        headerPanel.add(lblLocation, BorderLayout.NORTH);
+        headerPanel.add(searchPanel, BorderLayout.SOUTH);
         
         // Main weather display
         JPanel mainPanel = new JPanel();
@@ -133,29 +187,34 @@ public class WeatherPanel extends JPanel {
         lblUpdate.setText("Last update: " + data.getLastUpdate());
         
         // Update icon based on condition
-        switch (data.getCondition().toLowerCase()) {
-            case "sunny":
-                lblWeatherIcon.setText("☀");
-                setBackground(new Color(135, 206, 250));
-                break;
-            case "partly cloudy":
-                lblWeatherIcon.setText("⛅");
-                setBackground(new Color(176, 196, 222));
-                break;
-            case "cloudy":
-                lblWeatherIcon.setText("☁");
-                setBackground(new Color(169, 169, 169));
-                break;
-            case "rainy":
-                lblWeatherIcon.setText("🌧");
-                setBackground(new Color(119, 136, 153));
-                break;
-            case "stormy":
-                lblWeatherIcon.setText("⛈");
-                setBackground(new Color(72, 79, 92));
-                break;
-            default:
-                lblWeatherIcon.setText("🌤");
+        String condition = data.getCondition().toLowerCase();
+        if (condition.contains("clear") || condition.contains("sunny")) {
+            lblWeatherIcon.setText("☀");
+            setBackground(new Color(135, 206, 250));
+        } else if (condition.contains("partly cloudy")) {
+            lblWeatherIcon.setText("⛅");
+            setBackground(new Color(176, 196, 222));
+        } else if (condition.contains("cloudy")) {
+            lblWeatherIcon.setText("☁");
+            setBackground(new Color(169, 169, 169));
+        } else if (condition.contains("rain") || condition.contains("drizzle")) {
+            lblWeatherIcon.setText("🌧");
+            setBackground(new Color(119, 136, 153));
+        } else if (condition.contains("storm") || condition.contains("thunder")) {
+            lblWeatherIcon.setText("⛈");
+            setBackground(new Color(72, 79, 92));
+        } else if (condition.contains("snow")) {
+            lblWeatherIcon.setText("❄");
+            setBackground(new Color(176, 224, 230));
+        } else if (condition.contains("fog")) {
+            lblWeatherIcon.setText("🌫");
+            setBackground(new Color(192, 192, 192));
+        } else if (condition.contains("not found") || condition.contains("unavailable") || condition.contains("error")) {
+            lblWeatherIcon.setText("❌");
+            setBackground(new Color(220, 220, 220));
+        } else {
+            lblWeatherIcon.setText("🌤");
+            setBackground(new Color(135, 206, 250));
         }
     }
     
@@ -164,5 +223,31 @@ public class WeatherPanel extends JPanel {
         lblTemperature.setText("--°C");
         lblHumidity.setText("N/A");
         lblWind.setText("N/A");
+    }
+    
+    public void setSearchListener(ActionListener listener) {
+        // Remove old listener if exists
+        for (ActionListener al : btnSearch.getActionListeners()) {
+            btnSearch.removeActionListener(al);
+        }
+        // Add new listener
+        btnSearch.addActionListener(listener);
+    }
+    
+    public String getSelectedLocation() {
+        Object selected = cboLocation.getEditor().getItem();
+        if (selected != null) {
+            String location = selected.toString().trim();
+            // Skip placeholder text
+            if (!location.isEmpty() && !location.equals("Nhập tên thành phố...")) {
+                return location;
+            }
+        }
+        return (String) cboLocation.getSelectedItem();
+    }
+    
+    public void setSearchEnabled(boolean enabled) {
+        btnSearch.setEnabled(enabled);
+        cboLocation.setEnabled(enabled);
     }
 }

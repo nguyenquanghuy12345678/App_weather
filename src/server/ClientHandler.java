@@ -57,6 +57,45 @@ public class ClientHandler implements Runnable {
                 server.log("Weather data sent to: " + username);
                 break;
                 
+            case Constants.MSG_LOCATION_SEARCH:
+                // Get location data from message
+                shared.LocationData locationData = (shared.LocationData) message.getData();
+                if (locationData != null) {
+                    // If coordinates are 0,0, we need to geocode the location name first
+                    if (locationData.getLatitude() == 0.0 && locationData.getLongitude() == 0.0) {
+                        server.log("Geocoding location: " + locationData.getLocationName());
+                        locationData = GeocodingService.geocodeLocation(locationData.getLocationName());
+                        
+                        if (locationData == null) {
+                            // Geocoding failed, send error
+                            WeatherData errorWeather = new WeatherData();
+                            errorWeather.setLocation(message.getData() != null ? 
+                                ((shared.LocationData)message.getData()).getLocationName() : "Unknown");
+                            errorWeather.setCondition("Location not found");
+                            errorWeather.setTemperature(0);
+                            errorWeather.setHumidity(0);
+                            errorWeather.setWindSpeed(0);
+                            errorWeather.setLastUpdate(java.time.LocalDateTime.now()
+                                .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")));
+                            
+                            Message errorResponse = new Message(Constants.MSG_WEATHER_RESPONSE, username, errorWeather);
+                            sendMessage(errorResponse);
+                            server.log("Location not found for: " + username);
+                            break;
+                        }
+                    }
+                    
+                    WeatherData weatherForLocation = new WeatherData(
+                        locationData.getLocationName(),
+                        locationData.getLatitude(),
+                        locationData.getLongitude()
+                    );
+                    Message locationResponse = new Message(Constants.MSG_WEATHER_RESPONSE, username, weatherForLocation);
+                    sendMessage(locationResponse);
+                    server.log("Weather data for " + locationData.getLocationName() + " sent to: " + username);
+                }
+                break;
+                
             case Constants.MSG_LOGOUT:
                 running = false;
                 break;

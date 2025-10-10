@@ -10,6 +10,7 @@ public class Constants {
     public static final String MSG_LOGOUT = "LOGOUT";
     public static final String MSG_WEATHER_REQUEST = "WEATHER_REQ";
     public static final String MSG_WEATHER_RESPONSE = "WEATHER_RES";
+    public static final String MSG_LOCATION_SEARCH = "LOCATION_SEARCH";
     public static final String MSG_SUCCESS = "SUCCESS";
     public static final String MSG_ERROR = "ERROR";
     
