@@ -24,7 +24,14 @@ public class WeatherClient extends JFrame {
     }
     
     private void initUI() {
-        setTitle("☁ Weather Client");
+        setTitle("Weather Client");
+        
+        // Set window icon
+        ImageIcon windowIcon = IconManager.loadIcon("cloud_app.png", 32);
+        if (windowIcon != null) {
+            setIconImage(windowIcon.getImage());
+        }
+        
         setSize(800, 650);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(0, 0));
@@ -38,7 +45,7 @@ public class WeatherClient extends JFrame {
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         leftPanel.setOpaque(false);
         
-        lblUsername = new JLabel("👤 Guest");
+        lblUsername = IconManager.createIconLabel("user.png", " Guest", 16);
         lblUsername.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblUsername.setForeground(Color.WHITE);
         
@@ -54,7 +61,7 @@ public class WeatherClient extends JFrame {
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         rightPanel.setOpaque(false);
         
-        btnRefresh = new JButton("🔄 Refresh Weather");
+        btnRefresh = IconManager.createIconButton("refresh.png", " Refresh Weather", 16);
         btnRefresh.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnRefresh.setBackground(Constants.COLOR_PRIMARY);
         btnRefresh.setForeground(Color.WHITE);
@@ -63,7 +70,7 @@ public class WeatherClient extends JFrame {
         btnRefresh.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnRefresh.setEnabled(false);
         
-        btnDisconnect = new JButton("❌ Disconnect");
+        btnDisconnect = IconManager.createIconButton("disconnect.png", " Disconnect", 16);
         btnDisconnect.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnDisconnect.setBackground(Constants.COLOR_DANGER);
         btnDisconnect.setForeground(Color.WHITE);
@@ -134,7 +141,14 @@ public class WeatherClient extends JFrame {
             Message response = (Message) in.readObject();
             
             if (Constants.MSG_SUCCESS.equals(response.getType())) {
-                lblUsername.setText("👤 " + username);
+                // Update username label with icon
+                ImageIcon userIcon = IconManager.loadIcon("user.png", 16);
+                if (userIcon != null) {
+                    lblUsername.setIcon(userIcon);
+                    lblUsername.setText(" " + username);
+                } else {
+                    lblUsername.setText("👤 " + username);
+                }
                 lblStatus.setText("● Connected to " + host + ":" + port);
                 lblStatus.setForeground(Constants.COLOR_SUCCESS);
                 btnRefresh.setEnabled(true);

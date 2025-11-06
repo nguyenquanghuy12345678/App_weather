@@ -30,7 +30,14 @@ public class WeatherServer extends JFrame {
     }
     
     private void initUI() {
-        setTitle("☁ Weather Server - Quản lý kết nối");
+        setTitle("Weather Server - Quản lý kết nối");
+        
+        // Set window icon
+        ImageIcon windowIcon = IconManager.loadIcon("server.png", 32);
+        if (windowIcon != null) {
+            setIconImage(windowIcon.getImage());
+        }
+        
         setSize(1000, 700);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));
@@ -50,7 +57,14 @@ public class WeatherServer extends JFrame {
         
         btnStart = createButton("▶ Start Server", Constants.COLOR_SUCCESS);
         btnStop = createButton("⏹ Stop Server", Constants.COLOR_DANGER);
-        btnRefresh = createButton("🔄 Refresh", Constants.COLOR_PRIMARY);
+        btnRefresh = IconManager.createIconButton("refresh.png", " Refresh", 16);
+        btnRefresh.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnRefresh.setBackground(Constants.COLOR_PRIMARY);
+        btnRefresh.setForeground(Color.WHITE);
+        btnRefresh.setFocusPainted(false);
+        btnRefresh.setBorderPainted(false);
+        btnRefresh.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
         btnClear = createButton("🗑 Clear Log", new Color(149, 165, 166));
         
         btnStop.setEnabled(false);
@@ -100,7 +114,7 @@ public class WeatherServer extends JFrame {
         
         // Add button to action column
         tblClients.getColumn("Hành động").setCellRenderer((table, value, isSelected, hasFocus, row, column) -> {
-            JButton btn = new JButton("❌ Disconnect");
+            JButton btn = IconManager.createIconButton("disconnect.png", " Disconnect", 14);
             btn.setBackground(Constants.COLOR_DANGER);
             btn.setForeground(Color.WHITE);
             btn.setFocusPainted(false);
@@ -110,7 +124,7 @@ public class WeatherServer extends JFrame {
         tblClients.getColumn("Hành động").setCellEditor(new DefaultCellEditor(new JCheckBox()) {
             @Override
             public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
-                JButton btn = new JButton("❌ Disconnect");
+                JButton btn = IconManager.createIconButton("disconnect.png", " Disconnect", 14);
                 btn.setBackground(Constants.COLOR_DANGER);
                 btn.setForeground(Color.WHITE);
                 btn.addActionListener(e -> {

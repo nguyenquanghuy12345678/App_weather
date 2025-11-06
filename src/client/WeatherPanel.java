@@ -35,8 +35,14 @@ public class WeatherPanel extends JPanel {
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
         searchPanel.setOpaque(false);
         
-        JLabel lblSearchIcon = new JLabel("🔍");
-        lblSearchIcon.setFont(new Font("Segoe UI", Font.PLAIN, 20));
+        JLabel lblSearchIcon = new JLabel();
+        ImageIcon searchIcon = IconManager.loadIcon("search.png", 20);
+        if (searchIcon != null) {
+            lblSearchIcon.setIcon(searchIcon);
+        } else {
+            lblSearchIcon.setText("🔍");
+            lblSearchIcon.setFont(new Font("Segoe UI", Font.PLAIN, 20));
+        }
         
         // Predefined locations
         String[] locations = {
@@ -125,7 +131,7 @@ public class WeatherPanel extends JPanel {
             BorderFactory.createLineBorder(new Color(255, 255, 255, 200), 2),
             BorderFactory.createEmptyBorder(15, 15, 15, 15)));
         
-        JLabel lblHumidityTitle = new JLabel("💧 Humidity");
+        JLabel lblHumidityTitle = IconManager.createIconLabel("humidity.png", " Humidity", 16);
         lblHumidityTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
         lblHumidityTitle.setForeground(Constants.COLOR_DARK);
         lblHumidityTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -147,7 +153,7 @@ public class WeatherPanel extends JPanel {
             BorderFactory.createLineBorder(new Color(255, 255, 255, 200), 2),
             BorderFactory.createEmptyBorder(15, 15, 15, 15)));
         
-        JLabel lblWindTitle = new JLabel("💨 Wind Speed");
+        JLabel lblWindTitle = IconManager.createIconLabel("wind.png", " Wind Speed", 16);
         lblWindTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
         lblWindTitle.setForeground(Constants.COLOR_DARK);
         lblWindTitle.setAlignmentX(Component.CENTER_ALIGNMENT);

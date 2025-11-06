@@ -14,7 +14,7 @@ public class LoginDialog extends JDialog {
     private String username;
     
     public LoginDialog(Frame parent) {
-        super(parent, "🌤 Weather App - Login", true);
+        super(parent, "Weather App - Login", true);
         initUI();
     }
     
@@ -28,7 +28,8 @@ public class LoginDialog extends JDialog {
         JPanel headerPanel = new JPanel();
         headerPanel.setBackground(Constants.COLOR_PRIMARY);
         headerPanel.setPreferredSize(new Dimension(450, 80));
-        JLabel lblHeader = new JLabel("☁ Weather Application");
+        
+        JLabel lblHeader = IconManager.createIconLabel("cloud_app.png", " Weather Application", 32);
         lblHeader.setFont(new Font("Segoe UI", Font.BOLD, 28));
         lblHeader.setForeground(Color.WHITE);
         headerPanel.add(lblHeader);
@@ -88,7 +89,7 @@ public class LoginDialog extends JDialog {
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 20));
         btnPanel.setBackground(Color.WHITE);
         
-        btnConnect = new JButton("🔗 Connect");
+        btnConnect = IconManager.createIconButton("connect.png", " Connect", 18);
         btnConnect.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnConnect.setBackground(Constants.COLOR_SUCCESS);
         btnConnect.setForeground(Color.WHITE);
@@ -97,7 +98,7 @@ public class LoginDialog extends JDialog {
         btnConnect.setBorderPainted(false);
         btnConnect.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        btnCancel = new JButton("❌ Cancel");
+        btnCancel = IconManager.createIconButton("disconnect.png", " Cancel", 18);
         btnCancel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnCancel.setBackground(Constants.COLOR_DANGER);
         btnCancel.setForeground(Color.WHITE);
