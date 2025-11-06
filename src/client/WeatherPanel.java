@@ -11,6 +11,7 @@ public class WeatherPanel extends JPanel {
     private JLabel lblWeatherIcon;
     private JComboBox<String> cboLocation;
     private JButton btnSearch;
+    private static final int ICON_SIZE = 120;
     
     public WeatherPanel() {
         initUI();
@@ -90,8 +91,9 @@ public class WeatherPanel extends JPanel {
         JPanel tempPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         tempPanel.setOpaque(false);
         
-        lblWeatherIcon = new JLabel("☀");
-        lblWeatherIcon.setFont(new Font("Segoe UI", Font.PLAIN, 120));
+        lblWeatherIcon = new JLabel();
+        lblWeatherIcon.setPreferredSize(new Dimension(ICON_SIZE, ICON_SIZE));
+        setWeatherIcon("resources/icons/sun.png"); // Default icon
         
         lblTemperature = new JLabel("--°C");
         lblTemperature.setFont(new Font("Segoe UI", Font.BOLD, 80));
@@ -176,6 +178,18 @@ public class WeatherPanel extends JPanel {
         add(footerPanel, BorderLayout.PAGE_END);
     }
     
+    private void setWeatherIcon(String iconPath) {
+        try {
+            ImageIcon icon = new ImageIcon(iconPath);
+            Image image = icon.getImage().getScaledInstance(ICON_SIZE, ICON_SIZE, Image.SCALE_SMOOTH);
+            lblWeatherIcon.setIcon(new ImageIcon(image));
+        } catch (Exception e) {
+            // Fallback to text if icon not found
+            lblWeatherIcon.setText("?");
+            lblWeatherIcon.setFont(new Font("Segoe UI", Font.PLAIN, 120));
+        }
+    }
+    
     public void updateWeather(WeatherData data) {
         if (data == null) return;
         
@@ -189,31 +203,31 @@ public class WeatherPanel extends JPanel {
         // Update icon based on condition
         String condition = data.getCondition().toLowerCase();
         if (condition.contains("clear") || condition.contains("sunny")) {
-            lblWeatherIcon.setText("☀");
+            setWeatherIcon("resources/icons/sun.png");
             setBackground(new Color(135, 206, 250));
         } else if (condition.contains("partly cloudy")) {
-            lblWeatherIcon.setText("⛅");
+            setWeatherIcon("resources/icons/partly_cloudy.png");
             setBackground(new Color(176, 196, 222));
         } else if (condition.contains("cloudy")) {
-            lblWeatherIcon.setText("☁");
+            setWeatherIcon("resources/icons/cloudy.png");
             setBackground(new Color(169, 169, 169));
         } else if (condition.contains("rain") || condition.contains("drizzle")) {
-            lblWeatherIcon.setText("🌧");
+            setWeatherIcon("resources/icons/rain.png");
             setBackground(new Color(119, 136, 153));
         } else if (condition.contains("storm") || condition.contains("thunder")) {
-            lblWeatherIcon.setText("⛈");
+            setWeatherIcon("resources/icons/storm.png");
             setBackground(new Color(72, 79, 92));
         } else if (condition.contains("snow")) {
-            lblWeatherIcon.setText("❄");
+            setWeatherIcon("resources/icons/snow.png");
             setBackground(new Color(176, 224, 230));
         } else if (condition.contains("fog")) {
-            lblWeatherIcon.setText("🌫");
+            setWeatherIcon("resources/icons/fog.png");
             setBackground(new Color(192, 192, 192));
         } else if (condition.contains("not found") || condition.contains("unavailable") || condition.contains("error")) {
-            lblWeatherIcon.setText("❌");
+            setWeatherIcon("resources/icons/error.png");
             setBackground(new Color(220, 220, 220));
         } else {
-            lblWeatherIcon.setText("🌤");
+            setWeatherIcon("resources/icons/default.png");
             setBackground(new Color(135, 206, 250));
         }
     }
