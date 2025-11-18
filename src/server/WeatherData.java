@@ -16,25 +16,48 @@ public class WeatherData implements Serializable {
     private double windSpeed;
     private String lastUpdate;
     
+    // Extended weather data
+    private double pressure; // hPa
+    private double uvIndex;
+    private double visibility; // km
+    private String sunrise;
+    private String sunset;
+    private int cloudCover; // %
+    private double precipitation; // mm
+    private String windDirection;
+    private double feelsLike; // °C
+    
+    // Forecast data (7 days)
+    private java.util.List<DailyForecast> forecast;
+    
     // Default coordinates for Da Nang, Vietnam
     private static final double DEFAULT_LATITUDE = 16.0544;
     private static final double DEFAULT_LONGITUDE = 108.2022;
     
     public WeatherData() {
         this.location = "Da Nang, Vietnam";
+        this.forecast = new java.util.ArrayList<>();
         fetchWeatherFromAPI(DEFAULT_LATITUDE, DEFAULT_LONGITUDE);
     }
     
     public WeatherData(String location, double latitude, double longitude) {
         this.location = location;
+        this.forecast = new java.util.ArrayList<>();
         fetchWeatherFromAPI(latitude, longitude);
     }
     
     private void fetchWeatherFromAPI(double latitude, double longitude) {
         try {
-            // Open-Meteo API URL
+            // Open-Meteo API URL with extended parameters
             String apiUrl = String.format(
-                "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=Asia/Bangkok",
+                "https://api.open-meteo.com/v1/forecast?" +
+                "latitude=%.4f&longitude=%.4f" +
+                "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m," +
+                "surface_pressure,cloud_cover,wind_direction_10m,apparent_temperature" +
+                "&daily=weather_code,temperature_2m_max,temperature_2m_min," +
+                "sunrise,sunset,precipitation_sum,wind_speed_10m_max,uv_index_max" +
+                "&timezone=auto" +
+                "&forecast_days=7",
                 latitude, longitude
             );
             
@@ -69,10 +92,19 @@ public class WeatherData implements Serializable {
                 this.temperature = parseJsonDouble(jsonResponse, "temperature_2m");
                 this.humidity = (int) parseJsonDouble(jsonResponse, "relative_humidity_2m");
                 this.windSpeed = parseJsonDouble(jsonResponse, "wind_speed_10m");
+                this.pressure = parseJsonDouble(jsonResponse, "surface_pressure");
+                this.cloudCover = (int) parseJsonDouble(jsonResponse, "cloud_cover");
+                this.feelsLike = parseJsonDouble(jsonResponse, "apparent_temperature");
+                
+                double windDir = parseJsonDouble(jsonResponse, "wind_direction_10m");
+                this.windDirection = convertWindDirection(windDir);
                 
                 // Map weather code to condition
                 int weatherCode = (int) parseJsonDouble(jsonResponse, "weather_code");
                 this.condition = mapWeatherCode(weatherCode);
+                
+                // Parse daily forecast data
+                parseForecastData(jsonResponse);
                 
                 this.lastUpdate = java.time.LocalDateTime.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
@@ -81,6 +113,7 @@ public class WeatherData implements Serializable {
                 System.out.println("Temperature: " + this.temperature + "°C");
                 System.out.println("Humidity: " + this.humidity + "%");
                 System.out.println("Wind Speed: " + this.windSpeed + " km/h");
+                System.out.println("Pressure: " + this.pressure + " hPa");
                 System.out.println("Condition: " + this.condition);
                 
             } else {
@@ -171,6 +204,149 @@ public class WeatherData implements Serializable {
         return "Unknown";
     }
     
+    private String convertWindDirection(double degrees) {
+        String[] directions = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                              "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};
+        int index = (int) Math.round(degrees / 22.5) % 16;
+        return directions[index];
+    }
+    
+    private void parseForecastData(String json) {
+        try {
+            forecast.clear();
+            
+            // Find the daily object
+            String dailyMarker = "\"daily\":{";
+            int dailyStart = json.indexOf(dailyMarker);
+            if (dailyStart == -1) return;
+            
+            // Parse arrays from daily object
+            String[] dates = parseJsonArray(json, "time", dailyStart);
+            double[] maxTemps = parseJsonDoubleArray(json, "temperature_2m_max", dailyStart);
+            double[] minTemps = parseJsonDoubleArray(json, "temperature_2m_min", dailyStart);
+            int[] weatherCodes = parseJsonIntArray(json, "weather_code", dailyStart);
+            double[] precipitation = parseJsonDoubleArray(json, "precipitation_sum", dailyStart);
+            double[] windSpeeds = parseJsonDoubleArray(json, "wind_speed_10m_max", dailyStart);
+            String[] sunrises = parseJsonArray(json, "sunrise", dailyStart);
+            String[] sunsets = parseJsonArray(json, "sunset", dailyStart);
+            double[] uvIndexes = parseJsonDoubleArray(json, "uv_index_max", dailyStart);
+            
+            // Use the first day's data for current weather extended info
+            if (uvIndexes != null && uvIndexes.length > 0) {
+                this.uvIndex = uvIndexes[0];
+            }
+            if (sunrises != null && sunrises.length > 0) {
+                this.sunrise = formatTime(sunrises[0]);
+            }
+            if (sunsets != null && sunsets.length > 0) {
+                this.sunset = formatTime(sunsets[0]);
+            }
+            if (precipitation != null && precipitation.length > 0) {
+                this.precipitation = precipitation[0];
+            }
+            
+            // Create forecast entries
+            int days = Math.min(7, dates != null ? dates.length : 0);
+            for (int i = 0; i < days; i++) {
+                DailyForecast day = new DailyForecast();
+                day.setDate(dates[i]);
+                day.setMaxTemp(maxTemps[i]);
+                day.setMinTemp(minTemps[i]);
+                day.setWeatherCode(weatherCodes[i]);
+                day.setCondition(mapWeatherCode(weatherCodes[i]));
+                day.setPrecipitation(precipitation[i]);
+                day.setMaxWindSpeed(windSpeeds[i]);
+                day.setSunrise(formatTime(sunrises[i]));
+                day.setSunset(formatTime(sunsets[i]));
+                forecast.add(day);
+            }
+            
+            System.out.println("Parsed " + forecast.size() + " days of forecast data");
+            
+        } catch (Exception e) {
+            System.err.println("Error parsing forecast data: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    private String[] parseJsonArray(String json, String key, int startPos) {
+        try {
+            String searchKey = "\"" + key + "\":[";
+            int startIndex = json.indexOf(searchKey, startPos);
+            if (startIndex == -1) return new String[0];
+            
+            startIndex += searchKey.length();
+            int endIndex = json.indexOf("]", startIndex);
+            String arrayContent = json.substring(startIndex, endIndex);
+            
+            // Split by comma and clean quotes
+            String[] items = arrayContent.split(",");
+            for (int i = 0; i < items.length; i++) {
+                items[i] = items[i].trim().replace("\"", "");
+            }
+            return items;
+        } catch (Exception e) {
+            System.err.println("Error parsing array " + key + ": " + e.getMessage());
+            return new String[0];
+        }
+    }
+    
+    private double[] parseJsonDoubleArray(String json, String key, int startPos) {
+        try {
+            String searchKey = "\"" + key + "\":[";
+            int startIndex = json.indexOf(searchKey, startPos);
+            if (startIndex == -1) return new double[0];
+            
+            startIndex += searchKey.length();
+            int endIndex = json.indexOf("]", startIndex);
+            String arrayContent = json.substring(startIndex, endIndex);
+            
+            String[] items = arrayContent.split(",");
+            double[] result = new double[items.length];
+            for (int i = 0; i < items.length; i++) {
+                result[i] = Double.parseDouble(items[i].trim());
+            }
+            return result;
+        } catch (Exception e) {
+            System.err.println("Error parsing double array " + key + ": " + e.getMessage());
+            return new double[0];
+        }
+    }
+    
+    private int[] parseJsonIntArray(String json, String key, int startPos) {
+        try {
+            String searchKey = "\"" + key + "\":[";
+            int startIndex = json.indexOf(searchKey, startPos);
+            if (startIndex == -1) return new int[0];
+            
+            startIndex += searchKey.length();
+            int endIndex = json.indexOf("]", startIndex);
+            String arrayContent = json.substring(startIndex, endIndex);
+            
+            String[] items = arrayContent.split(",");
+            int[] result = new int[items.length];
+            for (int i = 0; i < items.length; i++) {
+                result[i] = Integer.parseInt(items[i].trim());
+            }
+            return result;
+        } catch (Exception e) {
+            System.err.println("Error parsing int array " + key + ": " + e.getMessage());
+            return new int[0];
+        }
+    }
+    
+    private String formatTime(String isoTime) {
+        try {
+            // Convert from ISO format like "2024-01-15T06:30" to "06:30"
+            if (isoTime != null && isoTime.contains("T")) {
+                return isoTime.substring(isoTime.indexOf("T") + 1);
+            }
+            return isoTime;
+        } catch (Exception e) {
+            return isoTime;
+        }
+    }
+    
     // Getters and Setters
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
@@ -189,4 +365,34 @@ public class WeatherData implements Serializable {
     
     public String getLastUpdate() { return lastUpdate; }
     public void setLastUpdate(String lastUpdate) { this.lastUpdate = lastUpdate; }
+    
+    public double getPressure() { return pressure; }
+    public void setPressure(double pressure) { this.pressure = pressure; }
+    
+    public double getUvIndex() { return uvIndex; }
+    public void setUvIndex(double uvIndex) { this.uvIndex = uvIndex; }
+    
+    public double getVisibility() { return visibility; }
+    public void setVisibility(double visibility) { this.visibility = visibility; }
+    
+    public String getSunrise() { return sunrise; }
+    public void setSunrise(String sunrise) { this.sunrise = sunrise; }
+    
+    public String getSunset() { return sunset; }
+    public void setSunset(String sunset) { this.sunset = sunset; }
+    
+    public int getCloudCover() { return cloudCover; }
+    public void setCloudCover(int cloudCover) { this.cloudCover = cloudCover; }
+    
+    public double getPrecipitation() { return precipitation; }
+    public void setPrecipitation(double precipitation) { this.precipitation = precipitation; }
+    
+    public String getWindDirection() { return windDirection; }
+    public void setWindDirection(String windDirection) { this.windDirection = windDirection; }
+    
+    public double getFeelsLike() { return feelsLike; }
+    public void setFeelsLike(double feelsLike) { this.feelsLike = feelsLike; }
+    
+    public java.util.List<DailyForecast> getForecast() { return forecast; }
+    public void setForecast(java.util.List<DailyForecast> forecast) { this.forecast = forecast; }
 }

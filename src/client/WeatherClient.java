@@ -12,19 +12,27 @@ public class WeatherClient extends JFrame {
     private ObjectOutputStream out;
     private ObjectInputStream in;
     private WeatherPanel weatherPanel;
-    private JButton btnRefresh, btnDisconnect;
+    private DetailedWeatherPanel detailedPanel;
+    private ForecastPanel forecastPanel;
+    private MapPanel mapPanel;
+    private CommunityReportsPanel communityPanel;
+    private JButton btnRefresh, btnDisconnect, btnShare, btnFavorite;
     private JLabel lblStatus, lblUsername;
+    private JTabbedPane tabbedPane;
     private String username;
     private boolean connected = false;
     private Timer autoRefreshTimer;
+    private SearchHistoryManager historyManager;
+    private server.WeatherData currentWeatherData;
     
     public WeatherClient() {
+        historyManager = new SearchHistoryManager();
         initUI();
         showLoginDialog();
     }
     
     private void initUI() {
-        setTitle("Weather Client");
+        setTitle("Weather Client - Advanced Features");
         
         // Set window icon
         ImageIcon windowIcon = IconManager.loadIcon("cloud_app.png", 32);
@@ -32,7 +40,7 @@ public class WeatherClient extends JFrame {
             setIconImage(windowIcon.getImage());
         }
         
-        setSize(800, 650);
+        setSize(1000, 750);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(0, 0));
         
@@ -61,7 +69,13 @@ public class WeatherClient extends JFrame {
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         rightPanel.setOpaque(false);
         
-        btnRefresh = IconManager.createIconButton("refresh.png", " Refresh Weather", 16);
+        btnFavorite = createControlButton("⭐ Favorite", new Color(255, 193, 7));
+        btnFavorite.addActionListener(e -> toggleFavorite());
+        
+        btnShare = createControlButton("📤 Share", new Color(46, 204, 113));
+        btnShare.addActionListener(e -> shareWeather());
+        
+        btnRefresh = IconManager.createIconButton("refresh.png", " Refresh", 16);
         btnRefresh.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnRefresh.setBackground(Constants.COLOR_PRIMARY);
         btnRefresh.setForeground(Color.WHITE);
@@ -79,17 +93,40 @@ public class WeatherClient extends JFrame {
         btnDisconnect.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnDisconnect.setEnabled(false);
         
+        rightPanel.add(btnFavorite);
+        rightPanel.add(btnShare);
         rightPanel.add(btnRefresh);
         rightPanel.add(btnDisconnect);
         
         topPanel.add(leftPanel, BorderLayout.WEST);
         topPanel.add(rightPanel, BorderLayout.EAST);
         
-        // Center - Weather panel
+        // Center - Tabbed pane with multiple views
+        tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        
+        // Tab 1: Current Weather (original)
         weatherPanel = new WeatherPanel();
+        tabbedPane.addTab("🌤 Current", weatherPanel);
+        
+        // Tab 2: Detailed Weather
+        detailedPanel = new DetailedWeatherPanel();
+        tabbedPane.addTab("📊 Details", detailedPanel);
+        
+        // Tab 3: 7-Day Forecast
+        forecastPanel = new ForecastPanel();
+        tabbedPane.addTab("📅 Forecast", forecastPanel);
+        
+        // Tab 4: Map
+        mapPanel = new MapPanel();
+        tabbedPane.addTab("🗺️ Map", mapPanel);
+        
+        // Tab 5: Community Reports
+        communityPanel = new CommunityReportsPanel();
+        tabbedPane.addTab("👥 Community", communityPanel);
         
         add(topPanel, BorderLayout.NORTH);
-        add(weatherPanel, BorderLayout.CENTER);
+        add(tabbedPane, BorderLayout.CENTER);
         
         // Button actions
         btnRefresh.addActionListener(e -> requestWeather());
@@ -106,6 +143,18 @@ public class WeatherClient extends JFrame {
         });
         
         setLocationRelativeTo(null);
+    }
+    
+    private JButton createControlButton(String text, Color color) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setBackground(color);
+        btn.setForeground(Color.WHITE);
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setEnabled(false);
+        return btn;
     }
     
     private void showLoginDialog() {
@@ -153,6 +202,8 @@ public class WeatherClient extends JFrame {
                 lblStatus.setForeground(Constants.COLOR_SUCCESS);
                 btnRefresh.setEnabled(true);
                 btnDisconnect.setEnabled(true);
+                btnShare.setEnabled(true);
+                btnFavorite.setEnabled(true);
                 weatherPanel.setSearchEnabled(true);
                 
                 // Start listening for messages
@@ -207,7 +258,31 @@ public class WeatherClient extends JFrame {
         SwingUtilities.invokeLater(() -> {
             if (Constants.MSG_WEATHER_RESPONSE.equals(message.getType())) {
                 WeatherData data = (WeatherData) message.getData();
+                currentWeatherData = data;
+                
+                // Update all panels
                 weatherPanel.updateWeather(data);
+                detailedPanel.updateWeather(data);
+                
+                // Update forecast
+                if (data.getForecast() != null && !data.getForecast().isEmpty()) {
+                    forecastPanel.updateForecast(data.getForecast());
+                }
+                
+                // Update map
+                String locationName = data.getLocation();
+                // Try to find coordinates from search history or use defaults
+                LocationData locationData = findLocationData(locationName);
+                if (locationData != null) {
+                    mapPanel.updateMap(locationData);
+                    communityPanel.setLocation(locationName);
+                    
+                    // Add to search history
+                    historyManager.addToHistory(locationData);
+                    
+                    // Update favorite button
+                    updateFavoriteButton(locationName);
+                }
             }
         });
     }
@@ -301,6 +376,8 @@ public class WeatherClient extends JFrame {
             lblStatus.setForeground(Constants.COLOR_DANGER);
             btnRefresh.setEnabled(false);
             btnDisconnect.setEnabled(false);
+            btnShare.setEnabled(false);
+            btnFavorite.setEnabled(false);
             weatherPanel.setSearchEnabled(false);
             
             weatherPanel.showError("Disconnected from server");
@@ -318,6 +395,77 @@ public class WeatherClient extends JFrame {
             
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+    
+    private LocationData findLocationData(String locationName) {
+        // First check predefined locations
+        LocationData predefined = getLocationCoordinates(locationName);
+        if (predefined != null) return predefined;
+        
+        // Check search history
+        for (LocationData loc : historyManager.getSearchHistory()) {
+            if (loc.getLocationName().equals(locationName)) {
+                return loc;
+            }
+        }
+        
+        // Check favorites
+        for (LocationData loc : historyManager.getFavorites()) {
+            if (loc.getLocationName().equals(locationName)) {
+                return loc;
+            }
+        }
+        
+        // Default to Da Nang if not found
+        return new LocationData(locationName, 16.0544, 108.2022);
+    }
+    
+    private void shareWeather() {
+        if (currentWeatherData == null) {
+            JOptionPane.showMessageDialog(this,
+                "No weather data to share!",
+                "No Data",
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        ShareDialog dialog = new ShareDialog(this, currentWeatherData);
+        dialog.setVisible(true);
+    }
+    
+    private void toggleFavorite() {
+        if (currentWeatherData == null) return;
+        
+        String locationName = currentWeatherData.getLocation();
+        LocationData locationData = findLocationData(locationName);
+        
+        if (historyManager.isFavorite(locationName)) {
+            historyManager.removeFromFavorites(locationName);
+            btnFavorite.setText("⭐ Favorite");
+            btnFavorite.setBackground(new Color(255, 193, 7));
+            JOptionPane.showMessageDialog(this,
+                "Removed from favorites",
+                "Favorites",
+                JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            historyManager.addToFavorites(locationData);
+            btnFavorite.setText("★ Favorited");
+            btnFavorite.setBackground(new Color(255, 152, 0));
+            JOptionPane.showMessageDialog(this,
+                "Added to favorites",
+                "Favorites",
+                JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+    
+    private void updateFavoriteButton(String locationName) {
+        if (historyManager.isFavorite(locationName)) {
+            btnFavorite.setText("★ Favorited");
+            btnFavorite.setBackground(new Color(255, 152, 0));
+        } else {
+            btnFavorite.setText("⭐ Favorite");
+            btnFavorite.setBackground(new Color(255, 193, 7));
         }
     }
     
