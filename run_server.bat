@@ -11,6 +11,6 @@ if not exist bin (
     exit /b 1
 )
 
-java -cp bin server.WeatherServer
+java -cp "bin;lib\*" server.WeatherServer
 
 pause

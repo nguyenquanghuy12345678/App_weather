@@ -99,7 +99,7 @@ public class WeatherPanel extends JPanel {
         
         lblWeatherIcon = new JLabel();
         lblWeatherIcon.setPreferredSize(new Dimension(ICON_SIZE, ICON_SIZE));
-        setWeatherIcon("resources/icons/sun.png"); // Default icon
+        setWeatherIcon("sun.png"); // Default icon
         
         lblTemperature = new JLabel("--°C");
         lblTemperature.setFont(new Font("Segoe UI", Font.BOLD, 80));
@@ -178,18 +178,23 @@ public class WeatherPanel extends JPanel {
         lblUpdate.setForeground(new Color(255, 255, 255, 200));
         footerPanel.add(lblUpdate);
         
+        // Center container to avoid BorderLayout SOUTH/PAGE_END replacement
+        JPanel centerContainer = new JPanel(new BorderLayout());
+        centerContainer.setOpaque(false);
+        centerContainer.add(mainPanel, BorderLayout.NORTH);
+        centerContainer.add(detailsPanel, BorderLayout.CENTER);
+
         add(headerPanel, BorderLayout.NORTH);
-        add(mainPanel, BorderLayout.CENTER);
-        add(detailsPanel, BorderLayout.SOUTH);
-        add(footerPanel, BorderLayout.PAGE_END);
+        add(centerContainer, BorderLayout.CENTER);
+        add(footerPanel, BorderLayout.SOUTH);
     }
     
-    private void setWeatherIcon(String iconPath) {
-        try {
-            ImageIcon icon = new ImageIcon(iconPath);
-            Image image = icon.getImage().getScaledInstance(ICON_SIZE, ICON_SIZE, Image.SCALE_SMOOTH);
-            lblWeatherIcon.setIcon(new ImageIcon(image));
-        } catch (Exception e) {
+    private void setWeatherIcon(String iconName) {
+        ImageIcon icon = IconManager.loadIcon(iconName, ICON_SIZE);
+        if (icon != null) {
+            lblWeatherIcon.setIcon(icon);
+            lblWeatherIcon.setText("");
+        } else {
             // Fallback to text if icon not found
             lblWeatherIcon.setText("?");
             lblWeatherIcon.setFont(new Font("Segoe UI", Font.PLAIN, 120));
@@ -207,33 +212,27 @@ public class WeatherPanel extends JPanel {
         lblUpdate.setText("Last update: " + data.getLastUpdate());
         
         // Update icon based on condition
+        String iconName = IconManager.mapConditionToIcon(data.getCondition());
+        setWeatherIcon(iconName);
+
         String condition = data.getCondition().toLowerCase();
         if (condition.contains("clear") || condition.contains("sunny")) {
-            setWeatherIcon("resources/icons/sun.png");
             setBackground(new Color(135, 206, 250));
         } else if (condition.contains("partly cloudy")) {
-            setWeatherIcon("resources/icons/partly_cloudy.png");
             setBackground(new Color(176, 196, 222));
         } else if (condition.contains("cloudy")) {
-            setWeatherIcon("resources/icons/cloudy.png");
             setBackground(new Color(169, 169, 169));
         } else if (condition.contains("rain") || condition.contains("drizzle")) {
-            setWeatherIcon("resources/icons/rain.png");
             setBackground(new Color(119, 136, 153));
         } else if (condition.contains("storm") || condition.contains("thunder")) {
-            setWeatherIcon("resources/icons/storm.png");
             setBackground(new Color(72, 79, 92));
         } else if (condition.contains("snow")) {
-            setWeatherIcon("resources/icons/snow.png");
             setBackground(new Color(176, 224, 230));
         } else if (condition.contains("fog")) {
-            setWeatherIcon("resources/icons/fog.png");
             setBackground(new Color(192, 192, 192));
         } else if (condition.contains("not found") || condition.contains("unavailable") || condition.contains("error")) {
-            setWeatherIcon("resources/icons/error.png");
             setBackground(new Color(220, 220, 220));
         } else {
-            setWeatherIcon("resources/icons/default.png");
             setBackground(new Color(135, 206, 250));
         }
     }

@@ -1,6 +1,5 @@
 package client;
 
-import server.WeatherData;
 import shared.Constants;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -8,7 +7,6 @@ import java.awt.*;
 import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
 import java.util.List;
 
 public class CommunityReportsPanel extends JPanel {
@@ -16,14 +14,12 @@ public class CommunityReportsPanel extends JPanel {
     private DefaultTableModel tableModel;
     private JTextArea txtComment;
     private JComboBox<String> cboAccuracy;
-    private JLabel lblStats;
-    private List<WeatherReport> reports;
-    private static final String REPORTS_FILE = "community_reports.dat";
+    private JLabel lblStats, lblAvgAccuracy;
+    private CommunityReportsManager reportsManager;
     private String currentLocation;
     
     public CommunityReportsPanel() {
-        reports = new ArrayList<>();
-        loadReports();
+        reportsManager = new CommunityReportsManager();
         initUI();
     }
     
@@ -45,8 +41,18 @@ public class CommunityReportsPanel extends JPanel {
         lblStats.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblStats.setForeground(Color.GRAY);
         
+        lblAvgAccuracy = new JLabel("Avg: -");
+        lblAvgAccuracy.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblAvgAccuracy.setForeground(new Color(46, 125, 50));
+        
+        JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        statsPanel.setOpaque(false);
+        statsPanel.add(lblStats);
+        statsPanel.add(new JLabel("|"));
+        statsPanel.add(lblAvgAccuracy);
+        
         headerPanel.add(lblTitle, BorderLayout.WEST);
-        headerPanel.add(lblStats, BorderLayout.EAST);
+        headerPanel.add(statsPanel, BorderLayout.EAST);
         
         // Split pane
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
@@ -179,17 +185,15 @@ public class CommunityReportsPanel extends JPanel {
         
         int accuracy = cboAccuracy.getSelectedIndex() + 1; // 1-5 stars
         String comment = txtComment.getText().trim();
+        String username = System.getProperty("user.name");
         
-        WeatherReport report = new WeatherReport(
+        reportsManager.addReport(
             currentLocation,
             accuracy,
             comment.isEmpty() ? "No comment" : comment,
-            System.getProperty("user.name"),
-            LocalDateTime.now()
+            username
         );
         
-        reports.add(0, report); // Add to beginning
-        saveReports();
         updateReportsTable();
         
         // Clear form
@@ -205,12 +209,13 @@ public class CommunityReportsPanel extends JPanel {
     private void updateReportsTable() {
         tableModel.setRowCount(0);
         
+        // Get reports from database
+        List<WeatherReport> allReports = reportsManager.getAllReports();
+        List<WeatherReport> filteredReports = allReports;
+        
         // Filter by current location if set
-        List<WeatherReport> filteredReports = reports;
         if (currentLocation != null && !currentLocation.isEmpty()) {
-            filteredReports = reports.stream()
-                .filter(r -> r.location.equals(currentLocation))
-                .collect(java.util.stream.Collectors.toList());
+            filteredReports = reportsManager.getReports(currentLocation);
         }
         
         for (WeatherReport report : filteredReports) {
@@ -223,28 +228,20 @@ public class CommunityReportsPanel extends JPanel {
             });
         }
         
+        // Update statistics
         lblStats.setText(String.format("Total Reports: %d (Showing: %d)", 
-            reports.size(), filteredReports.size()));
-    }
-    
-    @SuppressWarnings("unchecked")
-    private void loadReports() {
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(REPORTS_FILE))) {
-            reports = (List<WeatherReport>) ois.readObject();
-            System.out.println("Loaded " + reports.size() + " community reports");
-        } catch (FileNotFoundException e) {
-            System.out.println("No reports file found, starting fresh");
-        } catch (Exception e) {
-            System.err.println("Error loading reports: " + e.getMessage());
-            reports = new ArrayList<>();
-        }
-    }
-    
-    private void saveReports() {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(REPORTS_FILE))) {
-            oos.writeObject(reports);
-        } catch (Exception e) {
-            System.err.println("Error saving reports: " + e.getMessage());
+            allReports.size(), filteredReports.size()));
+        
+        // Update average accuracy for current location
+        if (currentLocation != null && !currentLocation.isEmpty()) {
+            ReportStats stats = reportsManager.getStatsForLocation(currentLocation);
+            if (stats.totalReports > 0) {
+                lblAvgAccuracy.setText(String.format("Avg: %.1f⭐", stats.averageAccuracy));
+            } else {
+                lblAvgAccuracy.setText("Avg: -");
+            }
+        } else {
+            lblAvgAccuracy.setText("Avg: -");
         }
     }
 }

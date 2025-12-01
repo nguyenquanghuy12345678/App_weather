@@ -88,10 +88,15 @@ public class DetailedWeatherPanel extends JPanel {
         lblUpdate.setForeground(new Color(255, 255, 255, 180));
         footerPanel.add(lblUpdate);
         
+        // Center container avoids conflicting SOUTH/PAGE_END usage
+        JPanel centerContainer = new JPanel(new BorderLayout());
+        centerContainer.setOpaque(false);
+        centerContainer.add(mainPanel, BorderLayout.NORTH);
+        centerContainer.add(detailsPanel, BorderLayout.CENTER);
+
         add(headerPanel, BorderLayout.NORTH);
-        add(mainPanel, BorderLayout.CENTER);
-        add(detailsPanel, BorderLayout.SOUTH);
-        add(footerPanel, BorderLayout.PAGE_END);
+        add(centerContainer, BorderLayout.CENTER);
+        add(footerPanel, BorderLayout.SOUTH);
     }
     
     private JPanel createInfoBox(String title, JLabel valueLabel) {
@@ -144,39 +149,34 @@ public class DetailedWeatherPanel extends JPanel {
     private void updateAppearance(String condition) {
         String conditionLower = condition.toLowerCase();
         
+        String iconName = IconManager.mapConditionToIcon(condition);
+        setWeatherIcon(iconName);
+
         if (conditionLower.contains("clear") || conditionLower.contains("sunny")) {
-            setWeatherIcon("resources/icons/sun.png");
             setBackground(new Color(135, 206, 250));
         } else if (conditionLower.contains("partly cloudy")) {
-            setWeatherIcon("resources/icons/partly_cloudy.png");
             setBackground(new Color(176, 196, 222));
         } else if (conditionLower.contains("cloudy")) {
-            setWeatherIcon("resources/icons/cloudy.png");
             setBackground(new Color(169, 169, 169));
         } else if (conditionLower.contains("rain") || conditionLower.contains("drizzle")) {
-            setWeatherIcon("resources/icons/rain.png");
             setBackground(new Color(119, 136, 153));
         } else if (conditionLower.contains("storm") || conditionLower.contains("thunder")) {
-            setWeatherIcon("resources/icons/storm.png");
             setBackground(new Color(72, 79, 92));
         } else if (conditionLower.contains("snow")) {
-            setWeatherIcon("resources/icons/snow.png");
             setBackground(new Color(176, 224, 230));
         } else if (conditionLower.contains("fog")) {
-            setWeatherIcon("resources/icons/fog.png");
             setBackground(new Color(192, 192, 192));
         } else {
-            setWeatherIcon("resources/icons/default.png");
             setBackground(new Color(135, 206, 250));
         }
     }
     
-    private void setWeatherIcon(String iconPath) {
-        try {
-            ImageIcon icon = new ImageIcon(iconPath);
-            Image image = icon.getImage().getScaledInstance(ICON_SIZE, ICON_SIZE, Image.SCALE_SMOOTH);
-            lblWeatherIcon.setIcon(new ImageIcon(image));
-        } catch (Exception e) {
+    private void setWeatherIcon(String iconName) {
+        ImageIcon icon = IconManager.loadIcon(iconName, ICON_SIZE);
+        if (icon != null) {
+            lblWeatherIcon.setIcon(icon);
+            lblWeatherIcon.setText("");
+        } else {
             lblWeatherIcon.setText("☁");
             lblWeatherIcon.setFont(new Font("Segoe UI", Font.PLAIN, ICON_SIZE));
             lblWeatherIcon.setForeground(Color.WHITE);

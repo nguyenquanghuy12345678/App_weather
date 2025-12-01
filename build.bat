@@ -11,7 +11,7 @@ echo Done!
 echo.
 
 echo [2/3] Compiling all Java files...
-javac -d bin -sourcepath src src/server/*.java src/client/*.java src/shared/*.java
+javac -d bin -cp "lib\*" -sourcepath src src/server/*.java src/client/*.java src/shared/*.java
 if %errorlevel% neq 0 (
     echo ERROR: Compilation failed!
     pause
