@@ -7,9 +7,9 @@ import java.sql.*;
 import java.util.*;
 
 /**
- * Manages search history and favorites backed by SQLite instead of serialized files.
- * Falls back to in-memory lists if database unavailable.
- * Can also sync with server if callback is provided.
+ * Manages search history and favorites.
+ * Search history: Local DB (client-side only)
+ * Favorites: Server sync (NO local DB for favorites)
  */
 public class SearchHistoryManager {
     private static final int MAX_HISTORY = 20;
@@ -35,7 +35,7 @@ public class SearchHistoryManager {
     private void init() {
         try (Connection conn = DBManager.getConnection()) {
             loadHistoryFromDb(conn);
-            loadFavoritesFromDb(conn);
+            // DO NOT load favorites from DB - wait for server data
         } catch (SQLException e) {
             System.err.println("SQLite not available: " + e.getMessage() + " (using in-memory fallback)");
             dbAvailable = false;
@@ -161,22 +161,7 @@ public class SearchHistoryManager {
         System.out.println("Loaded " + cacheHistory.size() + " history items");
     }
 
-    private void loadFavoritesFromDb(Connection conn) throws SQLException {
-        cacheFavorites.clear();
-        try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT location, latitude, longitude FROM favorites ORDER BY added_at DESC")) {
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    cacheFavorites.add(new LocationData(
-                            rs.getString("location"),
-                            rs.getDouble("latitude"),
-                            rs.getDouble("longitude")
-                    ));
-                }
-            }
-        }
-        System.out.println("Loaded " + cacheFavorites.size() + " favorites");
-    }
+    // loadFavoritesFromDb() REMOVED - favorites come from server only
 
     private void pruneHistory(Connection conn) throws SQLException {
         try (Statement st = conn.createStatement()) {
