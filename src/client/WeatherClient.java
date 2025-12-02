@@ -381,12 +381,25 @@ public class WeatherClient extends JFrame {
                         java.util.List<shared.ReportData> reportDataList = (java.util.List<shared.ReportData>) list;
                         java.util.List<WeatherReport> reports = new java.util.ArrayList<>();
                         for (shared.ReportData rd : reportDataList) {
+                            // Parse timestamp from server, fallback to now if null/invalid
+                            java.time.LocalDateTime reportTime;
+                            try {
+                                String timestampStr = rd.getTimestamp();
+                                if (timestampStr != null && !timestampStr.isEmpty()) {
+                                    reportTime = java.time.LocalDateTime.parse(timestampStr.replace(" ", "T"));
+                                } else {
+                                    reportTime = java.time.LocalDateTime.now();
+                                }
+                            } catch (Exception e) {
+                                reportTime = java.time.LocalDateTime.now();
+                            }
+                            
                             reports.add(new WeatherReport(
                                 rd.getLocation(),
                                 rd.getAccuracy(),
                                 rd.getComment(),
                                 rd.getUsername(),
-                                java.time.LocalDateTime.now() // Server doesn't send timestamp
+                                reportTime
                             ));
                         }
                         communityPanel.getReportsManager().setReports(reports);

@@ -207,8 +207,8 @@ public class ClientHandler implements Runnable {
         java.util.List<shared.ReportData> result = new java.util.ArrayList<>();
         try (java.sql.Connection conn = shared.DBManager.getConnection()) {
             String sql = locationFilter == null || locationFilter.isEmpty() ?
-                "SELECT location, accuracy, comment, username FROM community_reports ORDER BY timestamp DESC LIMIT 50" :
-                "SELECT location, accuracy, comment, username FROM community_reports WHERE location = ? ORDER BY timestamp DESC LIMIT 50";
+                "SELECT location, accuracy, comment, username, timestamp FROM community_reports ORDER BY timestamp DESC LIMIT 50" :
+                "SELECT location, accuracy, comment, username, timestamp FROM community_reports WHERE location = ? ORDER BY timestamp DESC LIMIT 50";
             
             try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
                 if (locationFilter != null && !locationFilter.isEmpty()) {
@@ -220,7 +220,8 @@ public class ClientHandler implements Runnable {
                             rs.getString("location"),
                             rs.getInt("accuracy"),
                             rs.getString("comment"),
-                            rs.getString("username")
+                            rs.getString("username"),
+                            rs.getString("timestamp") // Add timestamp from DB
                         ));
                     }
                 }
