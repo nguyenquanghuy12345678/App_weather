@@ -8,10 +8,21 @@ import java.util.*;
 /**
  * Manages community weather reports backed by SQLite.
  * Provides persistence for user-submitted weather accuracy reports.
+ * Can also sync with server if callback is provided.
  */
 public class CommunityReportsManager {
     private List<WeatherReport> cachedReports = new ArrayList<>();
     private boolean dbAvailable = true;
+    private ServerCallback serverCallback;
+    
+    public interface ServerCallback {
+        void sendAddReport(String location, int accuracy, String comment, String username);
+        void requestReports(String location);
+    }
+    
+    public void setServerCallback(ServerCallback callback) {
+        this.serverCallback = callback;
+    }
 
     public CommunityReportsManager() {
         loadReportsFromDb();
@@ -29,26 +40,17 @@ public class CommunityReportsManager {
             LocalDateTime.now()
         );
         
-        if (dbAvailable) {
-            try (Connection conn = DBManager.getConnection()) {
-                try (PreparedStatement ps = conn.prepareStatement(
-                        "INSERT INTO community_reports(location, accuracy, comment, username, timestamp) VALUES (?,?,?,?,?)")) {
-                    ps.setString(1, location);
-                    ps.setInt(2, accuracy);
-                    ps.setString(3, comment);
-                    ps.setString(4, username);
-                    ps.setTimestamp(5, Timestamp.valueOf(report.timestamp));
-                    ps.executeUpdate();
-                }
-                loadReportsFromDb();
-                return;
-            } catch (SQLException e) {
-                System.err.println("DB error addReport: " + e.getMessage());
-                dbAvailable = false;
-            }
+        // Send to server if connected
+        if (serverCallback != null) {
+            serverCallback.sendAddReport(location, accuracy, comment, username);
         }
-        // Fallback in-memory
+        
+        // Also cache locally
         cachedReports.add(0, report);
+    }
+    
+    public void setReports(List<WeatherReport> reports) {
+        this.cachedReports = new ArrayList<>(reports);
     }
 
     /**

@@ -96,10 +96,139 @@ public class ClientHandler implements Runnable {
                 }
                 break;
                 
+            case Constants.MSG_ADD_FAVORITE:
+                shared.FavoriteData favData = (shared.FavoriteData) message.getData();
+                if (favData != null) {
+                    addFavoriteToDb(favData);
+                    sendMessage(new Message(Constants.MSG_SUCCESS, "Favorite added"));
+                    server.log("Favorite added by " + username + ": " + favData.getLocation());
+                }
+                break;
+                
+            case Constants.MSG_REMOVE_FAVORITE:
+                String locationToRemove = (String) message.getData();
+                if (locationToRemove != null) {
+                    removeFavoriteFromDb(locationToRemove);
+                    sendMessage(new Message(Constants.MSG_SUCCESS, "Favorite removed"));
+                    server.log("Favorite removed by " + username + ": " + locationToRemove);
+                }
+                break;
+                
+            case Constants.MSG_GET_FAVORITES:
+                java.util.List<shared.LocationData> favorites = getFavoritesFromDb();
+                sendMessage(new Message(Constants.MSG_SUCCESS, username, favorites));
+                server.log("Favorites list sent to: " + username);
+                break;
+                
+            case Constants.MSG_ADD_REPORT:
+                shared.ReportData reportData = (shared.ReportData) message.getData();
+                if (reportData != null) {
+                    addReportToDb(reportData);
+                    sendMessage(new Message(Constants.MSG_SUCCESS, "Report added"));
+                    server.log("Report added by " + username + ": " + reportData.getLocation());
+                }
+                break;
+                
+            case Constants.MSG_GET_REPORTS:
+                String locationFilter = (String) message.getData();
+                java.util.List<shared.ReportData> reports = getReportsFromDb(locationFilter);
+                sendMessage(new Message(Constants.MSG_SUCCESS, username, reports));
+                server.log("Reports list sent to: " + username);
+                break;
+                
             case Constants.MSG_LOGOUT:
                 running = false;
                 break;
         }
+    }
+    
+    private void addFavoriteToDb(shared.FavoriteData fav) {
+        try (java.sql.Connection conn = shared.DBManager.getConnection()) {
+            String sql = "INSERT OR REPLACE INTO favorites(location, latitude, longitude) VALUES (?,?,?)";
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, fav.getLocation());
+                ps.setDouble(2, fav.getLatitude());
+                ps.setDouble(3, fav.getLongitude());
+                ps.executeUpdate();
+            }
+        } catch (java.sql.SQLException e) {
+            server.log("DB error adding favorite: " + e.getMessage());
+        }
+    }
+    
+    private void removeFavoriteFromDb(String location) {
+        try (java.sql.Connection conn = shared.DBManager.getConnection()) {
+            String sql = "DELETE FROM favorites WHERE location = ?";
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, location);
+                ps.executeUpdate();
+            }
+        } catch (java.sql.SQLException e) {
+            server.log("DB error removing favorite: " + e.getMessage());
+        }
+    }
+    
+    private java.util.List<shared.LocationData> getFavoritesFromDb() {
+        java.util.List<shared.LocationData> result = new java.util.ArrayList<>();
+        try (java.sql.Connection conn = shared.DBManager.getConnection()) {
+            String sql = "SELECT location, latitude, longitude FROM favorites ORDER BY added_at DESC";
+            try (java.sql.Statement st = conn.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery(sql)) {
+                while (rs.next()) {
+                    result.add(new shared.LocationData(
+                        rs.getString("location"),
+                        rs.getDouble("latitude"),
+                        rs.getDouble("longitude")
+                    ));
+                }
+            }
+        } catch (java.sql.SQLException e) {
+            server.log("DB error getting favorites: " + e.getMessage());
+        }
+        return result;
+    }
+    
+    private void addReportToDb(shared.ReportData report) {
+        try (java.sql.Connection conn = shared.DBManager.getConnection()) {
+            String sql = "INSERT INTO community_reports(location, accuracy, comment, username) VALUES (?,?,?,?)";
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, report.getLocation());
+                ps.setInt(2, report.getAccuracy());
+                ps.setString(3, report.getComment());
+                ps.setString(4, report.getUsername());
+                ps.executeUpdate();
+            }
+        } catch (java.sql.SQLException e) {
+            server.log("DB error adding report: " + e.getMessage());
+        }
+    }
+    
+    private java.util.List<shared.ReportData> getReportsFromDb(String locationFilter) {
+        java.util.List<shared.ReportData> result = new java.util.ArrayList<>();
+        try (java.sql.Connection conn = shared.DBManager.getConnection()) {
+            String sql = locationFilter == null || locationFilter.isEmpty() ?
+                "SELECT location, accuracy, comment, username FROM community_reports ORDER BY timestamp DESC LIMIT 50" :
+                "SELECT location, accuracy, comment, username FROM community_reports WHERE location = ? ORDER BY timestamp DESC LIMIT 50";
+            
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                if (locationFilter != null && !locationFilter.isEmpty()) {
+                    ps.setString(1, locationFilter);
+                }
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        result.add(new shared.ReportData(
+                            rs.getString("location"),
+                            rs.getInt("accuracy"),
+                            rs.getString("comment"),
+                            rs.getString("username")
+                        ));
+                    }
+                }
+            }
+        } catch (java.sql.SQLException e) {
+            server.log("DB error getting reports: " + e.getMessage());
+        }
+        return result;
     }
     
     public void sendMessage(Message message) {

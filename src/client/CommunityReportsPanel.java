@@ -29,6 +29,14 @@ public class CommunityReportsPanel extends JPanel {
         this.username = username;
     }
     
+    public void setServerCallback(CommunityReportsManager.ServerCallback callback) {
+        reportsManager.setServerCallback(callback);
+    }
+    
+    public CommunityReportsManager getReportsManager() {
+        return reportsManager;
+    }
+    
     private void initUI() {
         setLayout(new BorderLayout(10, 10));
         setBackground(Color.WHITE);

@@ -14,6 +14,13 @@ public class Constants {
     public static final String MSG_SUCCESS = "SUCCESS";
     public static final String MSG_ERROR = "ERROR";
     
+    // Database operations
+    public static final String MSG_ADD_FAVORITE = "ADD_FAVORITE";
+    public static final String MSG_REMOVE_FAVORITE = "REMOVE_FAVORITE";
+    public static final String MSG_GET_FAVORITES = "GET_FAVORITES";
+    public static final String MSG_ADD_REPORT = "ADD_REPORT";
+    public static final String MSG_GET_REPORTS = "GET_REPORTS";
+    
     // Colors
     public static final java.awt.Color COLOR_PRIMARY = new java.awt.Color(52, 152, 219);
     public static final java.awt.Color COLOR_SUCCESS = new java.awt.Color(46, 204, 113);

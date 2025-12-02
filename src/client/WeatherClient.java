@@ -27,6 +27,41 @@ public class WeatherClient extends JFrame {
     
     public WeatherClient() {
         historyManager = new SearchHistoryManager();
+        
+        // Setup server callbacks for favorites
+        historyManager.setServerCallback(new SearchHistoryManager.ServerCallback() {
+            @Override
+            public void sendAddFavorite(LocationData location) {
+                if (connected && out != null) {
+                    try {
+                        shared.FavoriteData favData = new shared.FavoriteData(
+                            location.getLocationName(),
+                            location.getLatitude(),
+                            location.getLongitude()
+                        );
+                        Message msg = new Message(Constants.MSG_ADD_FAVORITE, username, favData);
+                        out.writeObject(msg);
+                        out.flush();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            
+            @Override
+            public void sendRemoveFavorite(String location) {
+                if (connected && out != null) {
+                    try {
+                        Message msg = new Message(Constants.MSG_REMOVE_FAVORITE, username, location);
+                        out.writeObject(msg);
+                        out.flush();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        
         initUI();
         showLoginDialog();
     }
@@ -209,6 +244,39 @@ public class WeatherClient extends JFrame {
                 // Set username in community panel
                 communityPanel.setUsername(username);
                 
+                // Setup server callbacks for reports
+                communityPanel.setServerCallback(new CommunityReportsManager.ServerCallback() {
+                    @Override
+                    public void sendAddReport(String location, int accuracy, String comment, String user) {
+                        if (connected && out != null) {
+                            try {
+                                shared.ReportData reportData = new shared.ReportData(location, accuracy, comment, user);
+                                Message msg = new Message(Constants.MSG_ADD_REPORT, username, reportData);
+                                out.writeObject(msg);
+                                out.flush();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                    
+                    @Override
+                    public void requestReports(String location) {
+                        if (connected && out != null) {
+                            try {
+                                Message msg = new Message(Constants.MSG_GET_REPORTS, username, location);
+                                out.writeObject(msg);
+                                out.flush();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                });
+                
+                // Request favorites and reports from server
+                requestFavoritesFromServer();
+                
                 // Start listening for messages
                 startListening();
                 
@@ -286,8 +354,54 @@ public class WeatherClient extends JFrame {
                     // Update favorite button
                     updateFavoriteButton(locationName);
                 }
+            } else if (Constants.MSG_SUCCESS.equals(message.getType())) {
+                // Handle responses from server operations
+                Object data = message.getData();
+                if (data instanceof java.util.List) {
+                    // Could be favorites or reports list
+                    java.util.List<?> list = (java.util.List<?>) data;
+                    if (list.isEmpty()) {
+                        // Empty list - could be either favorites or reports
+                        // We accept empty lists without error
+                        return;
+                    }
+                    
+                    if (list.get(0) instanceof LocationData) {
+                        // It's favorites
+                        @SuppressWarnings("unchecked")
+                        java.util.List<LocationData> favorites = (java.util.List<LocationData>) list;
+                        historyManager.setFavorites(favorites);
+                    } else if (list.get(0) instanceof shared.ReportData) {
+                        // It's reports - convert to WeatherReport
+                        @SuppressWarnings("unchecked")
+                        java.util.List<shared.ReportData> reportDataList = (java.util.List<shared.ReportData>) list;
+                        java.util.List<WeatherReport> reports = new java.util.ArrayList<>();
+                        for (shared.ReportData rd : reportDataList) {
+                            reports.add(new WeatherReport(
+                                rd.getLocation(),
+                                rd.getAccuracy(),
+                                rd.getComment(),
+                                rd.getUsername(),
+                                java.time.LocalDateTime.now() // Server doesn't send timestamp
+                            ));
+                        }
+                        communityPanel.getReportsManager().setReports(reports);
+                    }
+                }
             }
         });
+    }
+    
+    private void requestFavoritesFromServer() {
+        if (connected && out != null) {
+            try {
+                Message msg = new Message(Constants.MSG_GET_FAVORITES, username);
+                out.writeObject(msg);
+                out.flush();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
     
     private void requestWeather() {

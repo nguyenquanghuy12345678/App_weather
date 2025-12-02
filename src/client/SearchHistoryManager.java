@@ -9,6 +9,7 @@ import java.util.*;
 /**
  * Manages search history and favorites backed by SQLite instead of serialized files.
  * Falls back to in-memory lists if database unavailable.
+ * Can also sync with server if callback is provided.
  */
 public class SearchHistoryManager {
     private static final int MAX_HISTORY = 20;
@@ -16,6 +17,16 @@ public class SearchHistoryManager {
     private List<LocationData> cacheHistory = new ArrayList<>();
     private List<LocationData> cacheFavorites = new ArrayList<>();
     private boolean dbAvailable = true;
+    private ServerCallback serverCallback;
+    
+    public interface ServerCallback {
+        void sendAddFavorite(LocationData location);
+        void sendRemoveFavorite(String location);
+    }
+    
+    public void setServerCallback(ServerCallback callback) {
+        this.serverCallback = callback;
+    }
 
     public SearchHistoryManager() {
         init();
@@ -81,43 +92,32 @@ public class SearchHistoryManager {
     // Favorites methods
     public void addToFavorites(LocationData location) {
         if (location == null) return;
-        if (dbAvailable) {
-            try (Connection conn = DBManager.getConnection()) {
-                try (PreparedStatement ps = conn.prepareStatement(
-                        "INSERT INTO favorites(location, latitude, longitude, added_at) VALUES (?,?,?,CURRENT_TIMESTAMP) " +
-                                "ON CONFLICT(location) DO NOTHING")) {
-                    ps.setString(1, location.getLocationName());
-                    ps.setDouble(2, location.getLatitude());
-                    ps.setDouble(3, location.getLongitude());
-                    ps.executeUpdate();
-                }
-                loadFavoritesFromDb(conn);
-                return;
-            } catch (SQLException e) {
-                System.err.println("DB error addToFavorites: " + e.getMessage());
-                dbAvailable = false;
-            }
+        
+        // Send to server if connected
+        if (serverCallback != null) {
+            serverCallback.sendAddFavorite(location);
         }
+        
+        // Also cache locally
         if (!isFavorite(location.getLocationName())) {
-            cacheFavorites.add(location);
+            cacheFavorites.add(0, location);
         }
     }
 
     public void removeFromFavorites(String locationName) {
         if (locationName == null) return;
-        if (dbAvailable) {
-            try (Connection conn = DBManager.getConnection(); PreparedStatement ps = conn.prepareStatement(
-                    "DELETE FROM favorites WHERE location = ?")) {
-                ps.setString(1, locationName);
-                ps.executeUpdate();
-                loadFavoritesFromDb(conn);
-                return;
-            } catch (SQLException e) {
-                System.err.println("DB error removeFromFavorites: " + e.getMessage());
-                dbAvailable = false;
-            }
+        
+        // Send to server if connected
+        if (serverCallback != null) {
+            serverCallback.sendRemoveFavorite(locationName);
         }
+        
+        // Also remove from local cache
         cacheFavorites.removeIf(loc -> loc.getLocationName().equals(locationName));
+    }
+    
+    public void setFavorites(List<LocationData> favorites) {
+        this.cacheFavorites = new ArrayList<>(favorites);
     }
 
     public boolean isFavorite(String locationName) {
