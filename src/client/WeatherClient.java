@@ -69,10 +69,10 @@ public class WeatherClient extends JFrame {
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         rightPanel.setOpaque(false);
         
-        btnFavorite = createControlButton("⭐ Favorite", new Color(255, 193, 7));
+        btnFavorite = createControlButton("Favorite", new Color(255, 193, 7));
         btnFavorite.addActionListener(e -> toggleFavorite());
         
-        btnShare = createControlButton("📤 Share", new Color(46, 204, 113));
+        btnShare = createControlButton("Share", new Color(46, 204, 113));
         btnShare.addActionListener(e -> shareWeather());
         
         btnRefresh = IconManager.createIconButton("refresh.png", " Refresh", 16);
@@ -107,23 +107,23 @@ public class WeatherClient extends JFrame {
         
         // Tab 1: Current Weather (original)
         weatherPanel = new WeatherPanel();
-        tabbedPane.addTab("🌤 Current", weatherPanel);
+        tabbedPane.addTab("Current", weatherPanel);
         
         // Tab 2: Detailed Weather
         detailedPanel = new DetailedWeatherPanel();
-        tabbedPane.addTab("📊 Details", detailedPanel);
+        tabbedPane.addTab("Details", detailedPanel);
         
         // Tab 3: 7-Day Forecast
         forecastPanel = new ForecastPanel();
-        tabbedPane.addTab("📅 Forecast", forecastPanel);
+        tabbedPane.addTab("Forecast", forecastPanel);
         
         // Tab 4: Map
         mapPanel = new MapPanel();
-        tabbedPane.addTab("🗺️ Map", mapPanel);
+        tabbedPane.addTab("Map", mapPanel);
         
         // Tab 5: Community Reports
         communityPanel = new CommunityReportsPanel();
-        tabbedPane.addTab("👥 Community", communityPanel);
+        tabbedPane.addTab("Community", communityPanel);
         
         add(topPanel, BorderLayout.NORTH);
         add(tabbedPane, BorderLayout.CENTER);
@@ -205,6 +205,9 @@ public class WeatherClient extends JFrame {
                 btnShare.setEnabled(true);
                 btnFavorite.setEnabled(true);
                 weatherPanel.setSearchEnabled(true);
+                
+                // Set username in community panel
+                communityPanel.setUsername(username);
                 
                 // Start listening for messages
                 startListening();
@@ -442,7 +445,7 @@ public class WeatherClient extends JFrame {
         
         if (historyManager.isFavorite(locationName)) {
             historyManager.removeFromFavorites(locationName);
-            btnFavorite.setText("⭐ Favorite");
+            btnFavorite.setText("Favorite");
             btnFavorite.setBackground(new Color(255, 193, 7));
             JOptionPane.showMessageDialog(this,
                 "Removed from favorites",
@@ -450,7 +453,7 @@ public class WeatherClient extends JFrame {
                 JOptionPane.INFORMATION_MESSAGE);
         } else {
             historyManager.addToFavorites(locationData);
-            btnFavorite.setText("★ Favorited");
+            btnFavorite.setText("Favorited");
             btnFavorite.setBackground(new Color(255, 152, 0));
             JOptionPane.showMessageDialog(this,
                 "Added to favorites",

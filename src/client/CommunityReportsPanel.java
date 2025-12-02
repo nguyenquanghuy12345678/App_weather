@@ -17,10 +17,16 @@ public class CommunityReportsPanel extends JPanel {
     private JLabel lblStats, lblAvgAccuracy;
     private CommunityReportsManager reportsManager;
     private String currentLocation;
+    private String username; // Logged-in username
     
     public CommunityReportsPanel() {
         reportsManager = new CommunityReportsManager();
+        this.username = "Guest"; // Default
         initUI();
+    }
+    
+    public void setUsername(String username) {
+        this.username = username;
     }
     
     private void initUI() {
@@ -32,7 +38,7 @@ public class CommunityReportsPanel extends JPanel {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
         
-        JLabel lblTitle = new JLabel("👥 Community Weather Reports");
+        JLabel lblTitle = new JLabel("Community Weather Reports");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
         lblTitle.setForeground(Constants.COLOR_DARK);
         lblTitle.setBorder(BorderFactory.createEmptyBorder(5, 0, 10, 0));
@@ -132,10 +138,10 @@ public class CommunityReportsPanel extends JPanel {
         reportsPanel.setBackground(Color.WHITE);
         reportsPanel.setBorder(BorderFactory.createTitledBorder(
             BorderFactory.createLineBorder(Constants.COLOR_PRIMARY, 2),
-            "📊 Recent Community Reports",
+            "Recent Community Reports",
             0, 0, new Font("Segoe UI", Font.BOLD, 14), Constants.COLOR_DARK));
         
-        String[] columns = {"Date & Time", "Location", "Accuracy", "Comment", "User"};
+        String[] columns = {"Location", "Rating", "Comment", "User", "Time"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -145,17 +151,19 @@ public class CommunityReportsPanel extends JPanel {
         
         tblReports = new JTable(tableModel);
         tblReports.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        tblReports.setRowHeight(25);
-        tblReports.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        tblReports.setRowHeight(30);
+        tblReports.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
         tblReports.getTableHeader().setBackground(Constants.COLOR_PRIMARY);
         tblReports.getTableHeader().setForeground(Color.WHITE);
+        tblReports.setSelectionBackground(new Color(206, 224, 255));
+        tblReports.setGridColor(new Color(222, 226, 230));
         
-        // Column widths
-        tblReports.getColumnModel().getColumn(0).setPreferredWidth(150);
-        tblReports.getColumnModel().getColumn(1).setPreferredWidth(150);
-        tblReports.getColumnModel().getColumn(2).setPreferredWidth(100);
-        tblReports.getColumnModel().getColumn(3).setPreferredWidth(300);
-        tblReports.getColumnModel().getColumn(4).setPreferredWidth(100);
+        // Set column widths
+        tblReports.getColumnModel().getColumn(0).setPreferredWidth(150); // Location
+        tblReports.getColumnModel().getColumn(1).setPreferredWidth(100); // Rating
+        tblReports.getColumnModel().getColumn(2).setPreferredWidth(300); // Comment
+        tblReports.getColumnModel().getColumn(3).setPreferredWidth(100); // User
+        tblReports.getColumnModel().getColumn(4).setPreferredWidth(120); // Time
         
         JScrollPane scrollTable = new JScrollPane(tblReports);
         reportsPanel.add(scrollTable, BorderLayout.CENTER);
@@ -185,13 +193,12 @@ public class CommunityReportsPanel extends JPanel {
         
         int accuracy = cboAccuracy.getSelectedIndex() + 1; // 1-5 stars
         String comment = txtComment.getText().trim();
-        String username = System.getProperty("user.name");
         
         reportsManager.addReport(
             currentLocation,
             accuracy,
             comment.isEmpty() ? "No comment" : comment,
-            username
+            this.username
         );
         
         updateReportsTable();
@@ -220,11 +227,11 @@ public class CommunityReportsPanel extends JPanel {
         
         for (WeatherReport report : filteredReports) {
             tableModel.addRow(new Object[]{
-                report.timestamp.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
                 report.location,
                 "⭐".repeat(report.accuracy),
                 report.comment,
-                report.username
+                report.username,
+                report.timestamp.format(DateTimeFormatter.ofPattern("dd/MM HH:mm"))
             });
         }
         

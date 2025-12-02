@@ -88,9 +88,10 @@ public class ForecastPanel extends JPanel {
         lblDate.setForeground(Constants.COLOR_DARK);
         lblDate.setAlignmentX(Component.CENTER_ALIGNMENT);
         
-        // Weather icon (emoji based on condition)
-        JLabel lblIcon = new JLabel(getWeatherEmoji(day.getWeatherCode()));
-        lblIcon.setFont(new Font("Segoe UI", Font.PLAIN, 40));
+        // Weather icon (emoji based on condition string)
+        String emoji = getWeatherEmoji(day.getCondition());
+        JLabel lblIcon = new JLabel(emoji, SwingConstants.CENTER);
+        lblIcon.setFont(new Font("Dialog", Font.PLAIN, 48));
         lblIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
         
         // Temperature
@@ -146,18 +147,18 @@ public class ForecastPanel extends JPanel {
         }
     }
     
-    private String getWeatherEmoji(int weatherCode) {
-        if (weatherCode == 0) return "☀️";
-        if (weatherCode == 1 || weatherCode == 2) return "⛅";
-        if (weatherCode == 3) return "☁️";
-        if (weatherCode >= 45 && weatherCode <= 48) return "🌫️";
-        if (weatherCode >= 51 && weatherCode <= 57) return "🌦️";
-        if (weatherCode >= 61 && weatherCode <= 67) return "🌧️";
-        if (weatherCode >= 71 && weatherCode <= 77) return "🌨️";
-        if (weatherCode >= 80 && weatherCode <= 82) return "🌧️";
-        if (weatherCode >= 85 && weatherCode <= 86) return "🌨️";
-        if (weatherCode >= 95 && weatherCode <= 99) return "⛈️";
-        return "☁️";
+    private String getWeatherEmoji(String condition) {
+        if (condition == null) return "🌡️";
+        String lower = condition.toLowerCase();
+        if (lower.contains("clear") || lower.contains("sunny")) return "☀️";
+        if (lower.contains("partly")) return "⛅";
+        if (lower.contains("cloud")) return "☁️";
+        if (lower.contains("rain") || lower.contains("shower")) return "🌧️";
+        if (lower.contains("storm")) return "⛈️";
+        if (lower.contains("snow")) return "❄️";
+        if (lower.contains("fog")) return "🌫️";
+        if (lower.contains("wind")) return "💨";
+        return "🌡️";
     }
 }
 

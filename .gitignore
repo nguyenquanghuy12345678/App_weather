@@ -2,22 +2,3 @@
 bin/
 *.class
 
-# Database files
-weather.db
-weather.db-journal
-
-# Old data files
-*.dat
-
-# IDE files
-.settings/
-.classpath
-.project
-.vscode/
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
