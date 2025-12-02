@@ -276,6 +276,7 @@ public class WeatherClient extends JFrame {
                 
                 // Request favorites and reports from server
                 requestFavoritesFromServer();
+                requestReportsFromServer();
                 
                 // Start listening for messages
                 startListening();
@@ -360,9 +361,11 @@ public class WeatherClient extends JFrame {
                 if (data instanceof java.util.List) {
                     // Could be favorites or reports list
                     java.util.List<?> list = (java.util.List<?>) data;
+                    
                     if (list.isEmpty()) {
-                        // Empty list - could be either favorites or reports
-                        // We accept empty lists without error
+                        // Empty list - set empty lists for both just in case
+                        historyManager.setFavorites(new java.util.ArrayList<>());
+                        communityPanel.getReportsManager().setReports(new java.util.ArrayList<>());
                         return;
                     }
                     
@@ -371,6 +374,7 @@ public class WeatherClient extends JFrame {
                         @SuppressWarnings("unchecked")
                         java.util.List<LocationData> favorites = (java.util.List<LocationData>) list;
                         historyManager.setFavorites(favorites);
+                        System.out.println("WeatherClient: Loaded " + favorites.size() + " favorites from server");
                     } else if (list.get(0) instanceof shared.ReportData) {
                         // It's reports - convert to WeatherReport
                         @SuppressWarnings("unchecked")
@@ -386,6 +390,8 @@ public class WeatherClient extends JFrame {
                             ));
                         }
                         communityPanel.getReportsManager().setReports(reports);
+                        communityPanel.refreshReportsDisplay();
+                        System.out.println("WeatherClient: Loaded " + reports.size() + " reports from server");
                     }
                 }
             }
@@ -396,6 +402,18 @@ public class WeatherClient extends JFrame {
         if (connected && out != null) {
             try {
                 Message msg = new Message(Constants.MSG_GET_FAVORITES, username);
+                out.writeObject(msg);
+                out.flush();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    private void requestReportsFromServer() {
+        if (connected && out != null) {
+            try {
+                Message msg = new Message(Constants.MSG_GET_REPORTS, username, null);
                 out.writeObject(msg);
                 out.flush();
             } catch (Exception e) {

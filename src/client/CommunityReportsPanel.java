@@ -18,6 +18,8 @@ public class CommunityReportsPanel extends JPanel {
     private CommunityReportsManager reportsManager;
     private String currentLocation;
     private String username; // Logged-in username
+    private boolean showAllLocations = true; // Default: show all
+    private JButton btnFilter; // Reference to filter button
     
     public CommunityReportsPanel() {
         reportsManager = new CommunityReportsManager();
@@ -35,6 +37,12 @@ public class CommunityReportsPanel extends JPanel {
     
     public CommunityReportsManager getReportsManager() {
         return reportsManager;
+    }
+    
+    public void refreshReportsDisplay() {
+        SwingUtilities.invokeLater(() -> {
+            updateReportsTable();
+        });
     }
     
     private void initUI() {
@@ -128,6 +136,10 @@ public class CommunityReportsPanel extends JPanel {
         gbc.weighty = 0;
         gbc.fill = GridBagConstraints.NONE;
         gbc.anchor = GridBagConstraints.CENTER;
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        buttonPanel.setOpaque(false);
+        
         JButton btnSubmit = new JButton("📤 Submit Report");
         btnSubmit.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnSubmit.setBackground(Constants.COLOR_SUCCESS);
@@ -137,7 +149,21 @@ public class CommunityReportsPanel extends JPanel {
         btnSubmit.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnSubmit.setPreferredSize(new Dimension(150, 35));
         btnSubmit.addActionListener(e -> submitReport());
-        formPanel.add(btnSubmit, gbc);
+        buttonPanel.add(btnSubmit);
+        
+        // Toggle filter button - changes between Show All and Filter modes
+        btnFilter = new JButton("📍 Filter Location");
+        btnFilter.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnFilter.setBackground(new Color(108, 117, 125)); // Gray when showing all
+        btnFilter.setForeground(Color.WHITE);
+        btnFilter.setFocusPainted(false);
+        btnFilter.setBorderPainted(false);
+        btnFilter.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnFilter.setPreferredSize(new Dimension(170, 35));
+        btnFilter.addActionListener(e -> toggleFilter());
+        buttonPanel.add(btnFilter);
+        
+        formPanel.add(buttonPanel, gbc);
         
         submitPanel.add(formPanel, BorderLayout.CENTER);
         
@@ -190,6 +216,22 @@ public class CommunityReportsPanel extends JPanel {
         updateReportsTable();
     }
     
+    private void toggleFilter() {
+        showAllLocations = !showAllLocations;
+        
+        if (showAllLocations) {
+            // Now showing all locations
+            btnFilter.setText("📍 Filter Location");
+            btnFilter.setBackground(new Color(108, 117, 125)); // Gray
+        } else {
+            // Now filtering by current location
+            btnFilter.setText("🌍 Show All");
+            btnFilter.setBackground(Constants.COLOR_PRIMARY); // Blue
+        }
+        
+        updateReportsTable();
+    }
+    
     private void submitReport() {
         if (currentLocation == null || currentLocation.isEmpty()) {
             JOptionPane.showMessageDialog(this,
@@ -228,8 +270,8 @@ public class CommunityReportsPanel extends JPanel {
         List<WeatherReport> allReports = reportsManager.getAllReports();
         List<WeatherReport> filteredReports = allReports;
         
-        // Filter by current location if set
-        if (currentLocation != null && !currentLocation.isEmpty()) {
+        // Filter by current location if NOT showing all AND location is set
+        if (!showAllLocations && currentLocation != null && !currentLocation.isEmpty()) {
             filteredReports = reportsManager.getReports(currentLocation);
         }
         
